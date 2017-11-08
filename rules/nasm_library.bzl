@@ -75,14 +75,14 @@ _nasm_library = rule(
 
 # on macOS, the nasm in /usr/bin is horrifically old (and i believe forked?)
 NASM_BIN_DEFAULT = select({
-    ":macos": "/usr/local/bin/nasm",
-    ":linux": "/usr/bin/nasm",
+    "@jonnrb_bazel_asm//rules:macos": "/usr/local/bin/nasm",
+    "@jonnrb_bazel_asm//rules:linux": "/usr/bin/nasm",
 })
 
 
 NASM_ARCH_OPTS = select({
-    ":macos": ["-f", "macho64"],
-    ":linux": ["-f", "elf64"],
+    "@jonnrb_bazel_asm//rules:macos": ["-f", "macho64"],
+    "@jonnrb_bazel_asm//rules:linux": ["-f", "elf64"],
 })
 
 

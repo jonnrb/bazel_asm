@@ -100,15 +100,15 @@ def _yasm_library_impl(ctx):
 
 # on macOS, the nasm in /usr/bin is horrifically old (and i believe forked?)
 YASM_BIN_DEFAULT = select({
-    ":macos": "/usr/local/bin/yasm",
-    ":linux": "/usr/bin/yasm",
+    "@jonnrb_bazel_asm//rules:macos": "/usr/local/bin/yasm",
+    "@jonnrb_bazel_asm//rules:linux": "/usr/bin/yasm",
 })
 
 
 # TODO: add switches for other architectures
 YASM_ARCH_OPTS = select({
-    ":macos": ["-f", "macho64", "-m", "amd64"],
-    ":linux": ["-f", "elf64", "-m", "amd64"],
+    "@jonnrb_bazel_asm//rules:macos": ["-f", "macho64", "-m", "amd64"],
+    "@jonnrb_bazel_asm//rules:linux": ["-f", "elf64", "-m", "amd64"],
 })
 
 
