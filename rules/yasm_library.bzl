@@ -1,7 +1,8 @@
-def _cc_yasm(ctx, opts, src):
+def _cc_yasm(ctx, arch, opts, src):
   yasm_bin = ctx.attr.yasm_bin
-  out = ctx.actions.declare_file(src.basename.replace(src.extension, "o"))
-  opts = opts + [src.path, '-o', out.path]
+  out = ctx.actions.declare_file("_objs/{}/{}/{}".format(
+      ctx.attr.name, src.dirname, src.basename.replace(src.extension, "o")))
+  opts = arch + ['-o', out.path] + opts + [src.path]
   inputs = []
 
   for i in ctx.attr.srcs + ctx.attr.hdrs + ctx.attr.deps:
@@ -86,9 +87,9 @@ def _preincludes(ctx):
 
 
 def _yasm_library_impl(ctx):
-  opts = ctx.attr.copts + _include_paths(ctx) + _preincludes(ctx)
-  deps = [_cc_yasm(ctx, opts, src) for target in ctx.attr.srcs
-          for src in target.files.to_list()]
+  opts = _include_paths(ctx) + ctx.attr.copts + _preincludes(ctx)
+  deps = [_cc_yasm(ctx, ctx.attr.yasm_arch, opts, src)
+          for target in ctx.attr.srcs for src in target.files.to_list()]
   for i in ctx.attr.hdrs:
     if hasattr(i, "files"):
       deps += i.files.to_list()
@@ -97,14 +98,45 @@ def _yasm_library_impl(ctx):
   return DefaultInfo(files=depset(deps))
 
 
-yasm_library = rule(
+# on macOS, the nasm in /usr/bin is horrifically old (and i believe forked?)
+YASM_BIN_DEFAULT = select({
+    ":macos": "/usr/local/bin/yasm",
+    ":linux": "/usr/bin/yasm",
+})
+
+
+# TODO: add switches for other architectures
+YASM_ARCH_OPTS = select({
+    ":macos": ["-f", "macho64", "-m", "amd64"],
+    ":linux": ["-f", "elf64", "-m", "amd64"],
+})
+
+
+_yasm_library = rule(
   implementation=_yasm_library_impl,
   attrs={
-    "yasm_bin": attr.string(default="/usr/local/bin/yasm"),
-    "preincludes": attr.label_list(allow_files=True),
-    "strip_include_prefix": attr.string(),
     "srcs": attr.label_list(allow_files=True),
     "hdrs": attr.label_list(allow_files=True),
     "deps": attr.label_list(allow_files=True),
     "copts": attr.string_list(),
+    "preincludes": attr.label_list(allow_files=True),
+    "strip_include_prefix": attr.string(),
+    "yasm_bin": attr.string(default=""),
+    "yasm_arch": attr.string_list(),
   })
+
+
+def yasm_library(name, srcs, hdrs=[], deps=[], copts=[],
+                 preincludes=[], strip_include_prefix="",
+                 yasm_bin=YASM_BIN_DEFAULT):
+  _yasm_library(
+      name = name,
+      srcs = srcs,
+      hdrs = hdrs,
+      deps = deps,
+      copts = copts,
+      preincludes = preincludes,
+      strip_include_prefix = strip_include_prefix,
+      yasm_bin = yasm_bin,
+      yasm_arch = YASM_ARCH_OPTS,
+  )
